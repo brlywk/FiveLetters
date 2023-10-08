@@ -1,12 +1,12 @@
 import { Dialog, Transition } from "@headlessui/react";
 import { Fragment, useEffect, useState } from "react";
 
-type HowToPlayProps = {
+interface HowToPlayProps {
   showHelp: boolean;
   numberOfLetters: number;
   numberOfTries: number;
   onClose: () => void;
-};
+}
 
 const HowToPlay = ({
   showHelp,
@@ -30,14 +30,14 @@ const HowToPlay = ({
       <Dialog as="div" className="absolute z-[9999]" onClose={handleClose}>
         <Transition.Child
           as={Fragment}
-          enter="ease-out duration-150"
+          enter="duration-150 ease-out"
           enterFrom="opacity-0"
           enterTo="opacity-100"
-          leave="ease-in duration-100"
+          leave="duration-100 ease-in"
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          {/* Backgrop */}
+          {/* Backdrop */}
           <div className="fixed inset-0 bg-gray-300/10 backdrop-blur" />
         </Transition.Child>
 
@@ -46,12 +46,12 @@ const HowToPlay = ({
           <div className="flex min-h-full items-center justify-center p-4 text-center">
             <Transition.Child
               as={Fragment}
-              enter="ease-out duration-300"
-              enterFrom="opacity-0 scale-95"
-              enterTo="opacity-100 scale-100"
-              leave="ease-in duration-200"
-              leaveFrom="opacity-100 scale-100"
-              leaveTo="opacity-0 scale-95"
+              enter="duration-300 ease-out"
+              enterFrom="scale-95 opacity-0"
+              enterTo="scale-100 opacity-100"
+              leave="duration-200 ease-in"
+              leaveFrom="scale-100 opacity-100"
+              leaveTo="scale-95 opacity-0"
             >
               <Dialog.Panel className="w-full max-w-md transform divide-y overflow-hidden rounded-2xl border border-black/10 bg-white/25 text-left align-middle shadow-xl backdrop-blur transition-all">
                 <Dialog.Title

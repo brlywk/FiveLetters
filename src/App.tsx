@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useReducer } from "react";
 
-import { EvaluatedGuess, LetterGuess } from "./types/wordTypes.ts";
-import { Action, State } from "./types/reducerTypes.ts";
 import { FetchError } from "./types/errorTypes.ts";
+import { Action, State } from "./types/reducerTypes.ts";
+import { LetterGuess } from "./types/wordTypes.ts";
 
 import reducer, { getFullInitialState } from "./state/appReducer.ts";
 
 import useLocalStorage from "./hooks/useLocalStorage";
 
-import InputFields from "./components/InputFields";
 import HowToPlay from "./components/HowToPlay.tsx";
+import InputFields from "./components/InputFields";
 import ResultView from "./components/ResultView.tsx";
 
 // ---- App Component ---- //
@@ -23,14 +23,16 @@ const App = () => {
   // state
   const [state, dispatch]: [State, React.Dispatch<Action>] = useReducer(
     reducer,
-    getFullInitialState(),
+    getFullInitialState(playedWords),
   );
 
   // other variables
   const numberOfTries = 3;
 
+  // TODO: DEBUG
   if (state.gameOver) console.log("Game Over");
   if (state.playerWon) console.log("Player won");
+  console.log(state.playedWords);
 
   /**
    * Searches for a value in an array and returns all indices found
@@ -238,10 +240,31 @@ const App = () => {
         )}
 
         {/* Game Over */}
-        {state.gameOver && <div>Haha you lost</div>}
+        {state.gameOver && (
+          <div>
+            Haha you lost
+            <button onClick={() => dispatch({ type: "resetGame" })}>
+              Restart
+            </button>
+          </div>
+        )}
+
+        {/* The least important thing... the player actually won :P */}
+        {state.playerWon && <div>You won!</div>}
       </div>
     </>
   );
 };
 
 export default App;
+
+// TODO: Restart needs to also refetch new words or check if another of the previously fetched words
+// can be played
+//
+// TODO: ErrorState needs to be properly represented
+//
+// TODO: PlayerWon needs to be implemented
+//
+// TODO: playedWords needs to be properly persisted to local storage
+//
+// TODO: Maximum number of saved played words needs to be implemented

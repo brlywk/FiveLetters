@@ -44,13 +44,22 @@ export default function reducer(state: State, action: Action): State {
     case "resetGame":
       return getFullInitialState(state.playedWords);
     case "playerWon":
-      return { ...state, playerWon: true };
+      return {
+        ...state,
+        playerWon: true,
+        playedWords: [...state.playedWords, state.mysteryWord],
+      };
     case "setErrorState":
       return { ...state, errorState: action.payload };
     case "fullReset":
       return getFullInitialState();
     case "setGameOver":
-      return { ...state, gameOver: true };
+      return {
+        ...state,
+        gameOver: true,
+        playedWords: [...state.playedWords, state.mysteryWord],
+      };
+
     default:
       throw new Error("Unhandled action type");
   }
