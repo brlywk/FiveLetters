@@ -1,12 +1,12 @@
-import { KeyboardEvent, useRef, useState } from "react";
+import { KeyboardEvent, useEffect, useRef, useState } from "react";
 
 // Well well well TypeScript, here we go again
-type InputFieldsProps = {
+interface InputFieldsProps {
   /** Number of fields to provide */
   numberOfFields?: number;
   /** Callback being called when player submits a guess */
   submitHandler: (word: string[]) => void;
-};
+}
 
 // ---- InputFields Component ---- //
 const InputFields = ({
@@ -15,7 +15,7 @@ const InputFields = ({
 }: InputFieldsProps) => {
   // state and all that
   const initialArray = new Array(numberOfFields).fill("");
-  const [letters, setLetters] = useState(initialArray);
+  const [letters, setLetters] = useState<string[]>(initialArray);
 
   // We use this ref to move between input fields
   const inputRef = useRef<Map<number, HTMLInputElement>>();
@@ -40,7 +40,7 @@ const InputFields = ({
     const keys = inputRef.current.keys();
 
     for (const key of keys) {
-      const field = inputRef.current.get(key) as HTMLInputElement;
+      const field = inputRef.current.get(key)!;
       field.value = "";
     }
 
@@ -73,7 +73,7 @@ const InputFields = ({
     if (!inputRef.current || !inputRef.current.has(index)) return;
 
     // variables
-    const field = inputRef.current.get(index) as HTMLInputElement;
+    const field = inputRef.current.get(index)!;
     const hasPrev = index > 0;
     const hasNext = index < inputRef.current.size - 1;
     const isLetter = /^[a-zA-Z]$/.test(event.key);
@@ -126,6 +126,13 @@ const InputFields = ({
       event.preventDefault();
     }
   };
+
+  // useEffect to set focus on field when site is loaded
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.get(0)?.focus();
+    }
+  }, []);
 
   // legend has it that this return masterfully paints elaborate... stuff
   return (

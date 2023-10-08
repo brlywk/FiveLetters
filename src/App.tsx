@@ -1,81 +1,16 @@
 import { useCallback, useEffect, useReducer } from "react";
+
+import { EvaluatedGuess, LetterGuess } from "./types/wordTypes.ts";
+import { Action, State } from "./types/reducerTypes.ts";
+import { FetchError } from "./types/errorTypes.ts";
+
+import reducer, { getFullInitialState } from "./state/appReducer.ts";
+
 import useLocalStorage from "./hooks/useLocalStorage";
+
 import InputFields from "./components/InputFields";
-import ResultFields from "./components/ResultFields";
-import HowToPlay from "./components/HowToPlay";
-import ResultView from "./components/ResultView";
-
-// Possible states of letters
-export type LetterGuess = "wrongLetter" | "wrongPosition" | "correctPosition";
-export type EvaluatedGuess = Array<[string, LetterGuess]>;
-
-// let's try using a reducer for state management
-type State = {
-  /** Number of letters in word */
-  numberOfLetters: number;
-  /** The word to be guessed */
-  mysteryWord: string;
-  /** Current guess by player */
-  currentGuess: EvaluatedGuess;
-  /** All guesses by player so far */
-  playerGuesses: EvaluatedGuess[];
-  /** Words player already played in the past */
-  playedWords: string[];
-  /** Which try is the player currently on? */
-  currentTry: number;
-  /** Show help dialog */
-  showHelp: boolean;
-};
-
-// allowed state change actions
-type Action =
-  | { type: "setNumberOfLetters"; payload: number }
-  | { type: "setMysteryWord"; payload: string }
-  | { type: "setCurrentGuess"; payload: EvaluatedGuess }
-  | { type: "setPlayedWords"; payload: string[] }
-  | { type: "increaseCurrentTry" }
-  | { type: "resetGame" }
-  | { type: "showHelp"; payload: boolean };
-
-/**
- * Reducer function to update current state and return new state
- * @param state Current state
- * @param action Action to change state
- * @returns Updated state
- */
-function reducer(state: State, action: Action): State {
-  switch (action.type) {
-    case "setNumberOfLetters":
-      return { ...state, numberOfLetters: action.payload };
-    case "setMysteryWord":
-      return { ...state, mysteryWord: action.payload };
-    case "setCurrentGuess":
-      return {
-        ...state,
-        currentGuess: action.payload,
-        playerGuesses: [...state.playerGuesses, action.payload],
-      };
-    case "setPlayedWords":
-      return { ...state, playedWords: action.payload };
-    case "increaseCurrentTry":
-      return { ...state, currentTry: state.currentTry + 1 };
-    case "showHelp":
-      return { ...state, showHelp: action.payload };
-    case "resetGame":
-      // TODO reset to initial state
-      return {
-        numberOfLetters: 5,
-        mysteryWord: "",
-        currentGuess: [] as EvaluatedGuess,
-        playerGuesses: [] as EvaluatedGuess[],
-        playedWords: state.playedWords, // should be fine as reset shouldn't happen before load of played words
-        currentTry: 0,
-        showHelp: false,
-      };
-    default:
-      throw new Error("Unhandled action type");
-  }
-}
+import HowToPlay from "./components/HowToPlay.tsx";
+import ResultView from "./components/ResultView.tsx";
 
 // ---- App Component ---- //
 const App = () => {
@@ -86,19 +21,16 @@ const App = () => {
   );
 
   // state
-  const [state, dispatch] = useReducer(reducer, {
-    numberOfLetters: 5,
-    mysteryWord: "",
-    currentGuess: [] as EvaluatedGuess,
-    playerGuesses: [] as EvaluatedGuess[],
-    playedWords: playedWords,
-    currentTry: 0,
-    showHelp: false,
-  });
+  const [state, dispatch]: [State, React.Dispatch<Action>] = useReducer(
+    reducer,
+    getFullInitialState(),
+  );
 
   // other variables
-  const numberOfTries = 6;
-  const maxPlayedWordHistory = 3; // Todo: maybe 25?
+  const numberOfTries = 3;
+
+  if (state.gameOver) console.log("Game Over");
+  if (state.playerWon) console.log("Player won");
 
   /**
    * Searches for a value in an array and returns all indices found
@@ -126,39 +58,69 @@ const App = () => {
     [playedWords],
   );
 
+  const fetchData = useCallback(
+    async (abortController: AbortController) => {
+      // NOTE: The project is called 'FiveLetters', so a magic number is fine! Deal with it ;-)
+      // The app is build in a way to support longer and shorter words though...
+      const endpoint =
+        "https://random-word-api.herokuapp.com/word?length=5&number=10";
+
+      try {
+        const result = await fetch(endpoint, {
+          signal: abortController.signal,
+        });
+
+        if (!result.ok) {
+          throw new FetchError("Network Error");
+        }
+
+        const data = (await result.json()) as string[];
+
+        if (!Array.isArray(data) || data?.some((d) => typeof d !== "string")) {
+          throw new TypeError("Unexpected data type");
+        }
+
+        if (data?.length > 0) {
+          const unplayed = getUnplayedWords(data);
+
+          // TODO: Not the best way, but if there are no possible words to play, go into error state
+          // and delete all previously played words to make sure this state does not happen all
+          // that often...
+          if (unplayed.length === 0) {
+            dispatch({
+              type: "fullReset",
+            });
+          }
+
+          dispatch({
+            type: "setMysteryWord",
+            payload:
+              unplayed[
+                Math.floor(Math.random() * unplayed.length)
+              ].toUpperCase(),
+          });
+        }
+      } catch (error) {
+        // yeah should not both be handled here, but whatever!
+        if (error instanceof FetchError || error instanceof TypeError) {
+          dispatch({
+            type: "setErrorState",
+            payload: error.message,
+          });
+        }
+      }
+    },
+    [getUnplayedWords],
+  );
+
   // get the words
   useEffect(() => {
-    const endpoint = "http://localhost:3000/words";
+    const abortController = new AbortController();
 
-    // fetch(endpoint)
-    //   .then((result) => {
-    //     if (!result.ok) throw new Error(`Unable to reach server: ${endpoint}`);
+    void fetchData(abortController);
 
-    //     return result.json();
-    //   })
-    //   .then((data: string[]) => {
-    //     if (data && data.length > 0) {
-    //       const unplayed = getUnplayedWords(data);
-
-    //       if (unplayed.length === 0) {
-    //         dispatch({ type: "setMysteryWord", payload: "" });
-    //       }
-    //       dispatch({
-    //         type: "setMysteryWord",
-    //         payload:
-    //           unplayed[
-    //             Math.floor(Math.random() * unplayed.length)
-    //           ].toUpperCase(),
-    //       });
-    //     } else {
-    //       dispatch({ type: "setMysteryWord", payload: "" });
-    //     }
-    //   })
-    //   .catch((error: Error) => console.log(error.message));
-
-    // TODO just for debug
-    dispatch({ type: "setMysteryWord", payload: "HALLO" });
-  }, [getUnplayedWords]);
+    return () => abortController.abort();
+  }, [getUnplayedWords, fetchData]);
 
   /**
    * Check how "correct" the current user guess is.
@@ -168,7 +130,7 @@ const App = () => {
    */
   const checkCurrentGuess = (guess: string[]) => {
     // first: we need to make sure every letter in guess is in eval array in correct order
-    const evalGuess: [string, LetterGuess][] = new Array(guess.length);
+    const evalGuess = new Array(guess.length) as [string, LetterGuess][];
 
     // we need to check how "correct" the guess is
     guess.forEach(([letter], i) => {
@@ -193,18 +155,28 @@ const App = () => {
             evalGuess[i] = [letter, "wrongPosition"];
           }
         }
-      } else if (whereInWord.length > 0) {
-        // there is still a position in word left, so we must be at the wrong position
-        evalGuess[i] = [letter, "wrongPosition"];
-      } else {
+      } else if (whereInWord.length <= 0) {
         // letter is either not found or has already been placed somewhere else, so this
         // instance of letter is to be considered wrong
         evalGuess[i] = [letter, "wrongLetter"];
+      } else {
+        // there is still a position in word left, so we must be at the wrong position
+        evalGuess[i] = [letter, "wrongPosition"];
       }
     });
 
     // set as current guess
     dispatch({ type: "setCurrentGuess", payload: evalGuess });
+
+    // TODO: do we check if the player guessed correctly here or somewhere else?
+    if (guess.join("") === state.mysteryWord) {
+      dispatch({ type: "playerWon" });
+    }
+
+    // TODO: Check if the player exceeded the maximum allowed tries
+    if (state.playerGuesses.length + 1 >= numberOfTries) {
+      dispatch({ type: "setGameOver" });
+    }
   };
 
   /**
@@ -251,13 +223,22 @@ const App = () => {
         </h1>
         {/* TODO: delete after debug */}
         <div className="my-10">Word: {state.mysteryWord}</div>
-        <div className="flex flex-row items-center justify-between gap-2">
-          <InputFields submitHandler={handleGuess} />
-        </div>
-        <ResultView
-          playerGuesses={state.playerGuesses}
-          numberOfTries={numberOfTries}
-        />
+
+        {/* Playing controls */}
+        {!state.gameOver && !state.errorState && (
+          <>
+            <div className="flex flex-row items-center justify-between gap-2">
+              <InputFields submitHandler={handleGuess} />
+            </div>
+            <ResultView
+              playerGuesses={state.playerGuesses}
+              numberOfTries={numberOfTries}
+            />
+          </>
+        )}
+
+        {/* Game Over */}
+        {state.gameOver && <div>Haha you lost</div>}
       </div>
     </>
   );
