@@ -1,6 +1,5 @@
 module.exports = {
   root: true,
-  project: "fiveletters/tsconfig.json",
   env: { browser: true, es2020: true },
   extends: [
     "eslint:recommended",
@@ -15,7 +14,11 @@ module.exports = {
   parserOptions: {
     ecmaVersion: "latest",
     sourceType: "module",
-    project: ["./tsconfig.json", "./tsconfig.node.json", "./tailwind.config.js"],
+    project: [
+      "./tsconfig.json",
+      "./tsconfig.node.json",
+      "./tailwind.config.js",
+    ],
     tsconfigRootDir: __dirname,
     ecmaFeatures: {
       jsx: true,
@@ -23,6 +26,18 @@ module.exports = {
   },
   plugins: ["react-refresh"],
   rules: {
-    "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
+    "react-refresh/only-export-components": [
+      "warn",
+      { allowConstantExport: true },
+    ],
+    "no-unused-vars": "off",
+    "@typescript-eslint/no-unused-vars": [
+      "error",
+      {
+        argsIgnorePattern: "^_",
+        varsIgnorePattern: "^_",
+        caughtErrorsIgnorePattern: "^_",
+      },
+    ],
   },
 };
