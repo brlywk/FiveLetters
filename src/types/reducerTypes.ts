@@ -22,6 +22,10 @@ export interface State {
   errorState: string | null;
   /** Player lost hehe */
   gameOver: boolean;
+  /** Pretty much the loading state */
+  dataFetched: boolean;
+  /** Do we need to refetch? */
+  refetchRequired: boolean;
 }
 
 // allowed state change actions
@@ -36,4 +40,6 @@ export type Action =
   | { type: "playerWon" }
   | { type: "setErrorState"; payload: string | null }
   | { type: "fullReset" }
-  | { type: "setGameOver" };
+  | { type: "setGameOver" }
+  | { type: "fetchingData" }
+  | { type: "dataFetched" };

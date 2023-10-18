@@ -14,6 +14,8 @@ export function getFullInitialState(playedWords: string[] = []): State {
     playerWon: false,
     errorState: null,
     gameOver: false,
+    refetchRequired: true,
+    dataFetched: false,
   };
 }
 
@@ -27,37 +29,65 @@ export default function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "setNumberOfLetters":
       return { ...state, numberOfLetters: action.payload };
+
     case "setMysteryWord":
-      return { ...state, mysteryWord: action.payload };
+      return {
+        ...state,
+        mysteryWord: action.payload,
+        dataFetched: true,
+        refetchRequired: false,
+      };
+
     case "setCurrentGuess":
       return {
         ...state,
         currentGuess: action.payload,
         playerGuesses: [...state.playerGuesses, action.payload],
       };
+
     case "setPlayedWords":
       return { ...state, playedWords: action.payload };
+
     case "increaseCurrentTry":
       return { ...state, currentTry: state.currentTry + 1 };
+
     case "showHelp":
       return { ...state, showHelp: action.payload };
+
     case "resetGame":
       return getFullInitialState(state.playedWords);
+
     case "playerWon":
       return {
         ...state,
         playerWon: true,
         playedWords: [...state.playedWords, state.mysteryWord],
       };
+
     case "setErrorState":
       return { ...state, errorState: action.payload };
+
     case "fullReset":
       return getFullInitialState();
+
     case "setGameOver":
       return {
         ...state,
         gameOver: true,
         playedWords: [...state.playedWords, state.mysteryWord],
+      };
+
+    case "fetchingData":
+      return {
+        ...state,
+        dataFetched: false,
+      };
+
+    case "dataFetched":
+      return {
+        ...state,
+        dataFetched: true,
+        refetchRequired: false,
       };
 
     default:

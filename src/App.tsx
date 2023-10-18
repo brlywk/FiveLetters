@@ -67,7 +67,11 @@ const App = () => {
       const endpoint =
         "https://random-word-api.herokuapp.com/word?length=5&number=10";
 
+      console.log("Starting refetch");
+
       try {
+        dispatch({ type: "fetchingData" });
+
         const result = await fetch(endpoint, {
           signal: abortController.signal,
         });
@@ -93,6 +97,8 @@ const App = () => {
               type: "fullReset",
             });
           }
+
+          console.log("New data received", data);
 
           dispatch({
             type: "setMysteryWord",
@@ -123,6 +129,19 @@ const App = () => {
 
     return () => abortController.abort();
   }, [getUnplayedWords, fetchData]);
+
+  // restarting the game in any way
+  useEffect(() => {
+    const abortController = new AbortController();
+
+    console.log("Refetch?", state.refetchRequired);
+
+    if (state.refetchRequired) {
+      void fetchData(abortController);
+    }
+
+    return () => abortController.abort();
+  }, [fetchData, state.refetchRequired]);
 
   /**
    * Check how "correct" the current user guess is.
